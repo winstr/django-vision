@@ -1,0 +1,16 @@
+{
+    "rtsp_source_url": "",
+    "rtmp_server_url": "",
+    "src_video_format": "rawvideo",
+    "src_video_codec": "rawvideo",
+    "src_video_pixel_format": "bgr24",
+    "dst_video_format": "flv",
+    "dst_video_codec": "libx264",
+    "dst_video_pixel_format": "yuv420p",
+    "dst_video_resolution": {
+        "width": 640,
+        "height": 480
+    },
+    "dst_video_fps": 20,
+    "encoding_speed": "ultrafast"
+}
