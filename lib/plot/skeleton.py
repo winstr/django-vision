@@ -1,4 +1,4 @@
-keypoints = {
+KPTS_MAP = {
     0: "nose",
     1: "left_eye",
     2: "right_eye",
@@ -18,7 +18,7 @@ keypoints = {
     16: "right_ankle"
 }
 
-connections = {
+EDGE_MAP = {
     0: [1, 2],
     1: [3],
     2: [4],

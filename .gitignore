@@ -1,3 +1,4 @@
+__pycache__
 config/ffmpeg_.json
 *.pt
 *.mp4
