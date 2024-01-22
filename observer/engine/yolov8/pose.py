@@ -55,7 +55,7 @@ def plot_box(
 
         text = f'{cid}, {bid}, {conf:.3f}'
         text_color = (0, 0, 0)  # black.
-        plot_text(img, text, pt1, text_color, bg_color=box_color)
+        plot_text(img, text, pt1, text_color, background_color=box_color)
 
 
 def plot_pose(
@@ -97,6 +97,7 @@ def plot_pose(
             continue
         pt1 = tuple(xy[i])
 
+        print(kpts_connection_map[i])
         for j in kpts_connection_map[i]:
             if conf[j] < kpts_conf_thres:
                 continue
@@ -110,38 +111,42 @@ def plot_pose(
 
 class DefaultPose():
 
-    """ Yolov8 자세 클래스. 만약 자세 구성이 다른, 새로운 자세 추정 모델을
-        사용해야 한다면, 이 클래스를 상속받아 kpts_connection_map 사전만
-        수정하거나, plot(...) 메소드에 다른 kpts_connection_map을 입력
-        하면 됨. 인스턴스 생성 불가능.
+    """ Yolov8 자세 클래스. 인스턴스 생성 불가능.
 
         Static Attributes:
             kpts_connection_map (dict)
+            category_map (dict)
 
         Static Methods:
             plot(...) -> None
     """
 
-    # 키포인트들의 ID 목록을 반환하는 사전 객체. key는 특정 키포인트 ID를,
-    # value는 이 키포인트와 연결된, 다른 키포인트들의 ID 목록을 의미.
+    # 키포인트들의 ID 목록을 반환하는 사전 객체. key는
+    # 특정 키포인트 ID를, value는 이 키포인트와 연결된,
+    # 다른 키포인트들의 ID 목록을 의미.
     kpts_connection_map = {
-        0:  [1, 2],
-        1:  [3],
-        2:  [4],
-        3:  [],
-        4:  [],
-        5:  [6, 7, 11],
-        6:  [8, 12],
-        7:  [9],
-        8:  [10],
-        9:  [],
+        0: [1, 2],
+        1: [3],
+        2: [4],
+        3: [],
+        4: [],
+        5: [6, 7, 11],
+        6: [8, 12],
+        7: [9],
+        8: [10],
+        9: [],
         10: [],
         11: [12, 13],
         12: [14],
         13: [15],
         14: [16],
         15: [],
-        16: []}
+        16: []
+    }
+    # 카테고리 ID 별 카테고리 이름을 반환하는 사전 객체.
+    category_map = {
+        0: 'Person',
+    }
 
     def __init__(self):
         # 인스턴스 생성 불가능.
@@ -154,6 +159,7 @@ class DefaultPose():
             enable_tracking: bool = False,
             color_shade: int = 500,
             kpts_connection_map: dict = kpts_connection_map,
+            category_map: dict = category_map,
         ) -> None:
         """ 입력 이미지에 모든 객체들의 바운딩 박스와 자세를 그린다.
 
@@ -185,8 +191,8 @@ class DefaultPose():
 
         for i, (box, kpts) in enumerate(zip(boxes, kptss)):
             color = colors[i % len(colors)] if enable_tracking else colors
-            plot_box(img, box, color)
-            plot_pose(img, kpts, kpts_connection_map, color, color)
+            plot_box(img, box, color, category_map=category_map)
+            plot_pose(img, kpts, color, kpts_connection_map, color)
 
 
 class PoseEstimator(YOLO):
@@ -196,7 +202,7 @@ class PoseEstimator(YOLO):
     def __init__(self, model: str = 'yolov8n-pose.pt'):
         super().__init__(model, task=None)
 
-    def predict(self,
+    def estimate(self,
                 img: np.ndarray,
                 enable_tracking: bool = False,
                 **kwargs: List[Any]
