@@ -97,7 +97,6 @@ def plot_pose(
             continue
         pt1 = tuple(xy[i])
 
-        print(kpts_connection_map[i])
         for j in kpts_connection_map[i]:
             if conf[j] < kpts_conf_thres:
                 continue
