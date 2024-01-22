@@ -3,3 +3,6 @@ config/ffmpeg_.json
 *.pt
 *.mp4
 *.pyc
+*.png
+*.jpg
+*.gif
