@@ -305,10 +305,10 @@ class Colors():
 
     @staticmethod
     def to_bgr(hex: int) -> List[int]:
-        """ 16진수 -> 10진수 8비트 컬러코드(BGR888)로 변환.
+        """ 16진수 색상을 8비트 BGR 색상(BGR888)으로 변환.
 
             Args:
-                hex (int): 16진수 컬러코드.
+                hex (int): 16진수 색상 코드.
 
             Returns:
                 (List[int]): 8비트 BGR 색상 코드 [B,G,R].
