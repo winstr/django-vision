@@ -2,37 +2,35 @@ from typing import List
 
 
 class Colors():
-    """ 컬러코드 클래스 (인스턴스 생성 불가능)
-    -----------------------------------
-    Class Field:
-        red (dict),
-        pink (dict),
-        purple (dict),
-        deep_purple (dict),
-        indigo (dict),
-        blue (dict),
-        light_blue (dict),
-        cyan (dict),
-        teal (dict),
-        green (dict),
-        light_green (dict),
-        lime (dict),
-        yellow (dict),
-        amber (dict),
-        orange (dict),
-        deep_orange (dict),
-        brown (dict),
-        grey (dict),
-        blue_grey (dict),
-        all_colors (List[dict])
+    """ 색상 클래스. 인스턴스 생성 불가능.
+    
+        Static Attributes:
+            red (dict),
+            pink (dict),
+            purple (dict),
+            deep_purple (dict),
+            indigo (dict),
+            blue (dict),
+            light_blue (dict),
+            cyan (dict),
+            teal (dict),
+            green (dict),
+            light_green (dict),
+            lime (dict),
+            yellow (dict),
+            amber (dict),
+            orange (dict),
+            deep_orange (dict),
+            brown (dict),
+            grey (dict),
+            blue_grey (dict),
+            all_colors (List[dict])
+            all_shades (List[int])
 
-    Static Method:
-        def _convert(hex: int) -> List[int]:
-        def to_rgb(hex: int) -> List[int]:
-        def to_bgr(hex: int) -> List[int]:
-
-    Instance Method:
-        def __init__(self) -> None:
+        Static Methods:
+            def _convert(hex: int) -> List[int]:
+            def to_rgb(hex: int) -> List[int]:
+            def to_bgr(hex: int) -> List[int]:
     """
 
     red = {
@@ -284,6 +282,7 @@ class Colors():
         grey,
         blue_grey,
     ]
+    all_shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
 
     @staticmethod
     def _convert(hex: int) -> List[int]:
@@ -294,23 +293,25 @@ class Colors():
 
     @staticmethod
     def to_rgb(hex: int) -> List[int]:
-        """ 16진수 컬러코드를 10진수 8비트 RGB 컬러코드로 변환.
-        -----------------------------------------------
-        Args:
-            hex (int): 16진수 컬러코드
-        Returns:
-            (List[int]): 8비트 RGB 컬러코드
+        """ 16진수 색상을 8비트 RGB 색상(RGB888)으로 변환.
+
+            Args:
+                hex (int): 16진수 색상 코드.
+
+            Returns:
+                (List[int]): 8비트 RGB 색상 코드 [R,G,B].
         """
         return Colors._convert(hex)
 
     @staticmethod
     def to_bgr(hex: int) -> List[int]:
-        """ 16진수 컬러코드를 10진수 8비트 BGR 컬러코드로 변환.
-        -----------------------------------------------
-        Args:
-            hex (int): 16진수 컬러코드
-        Returns:
-            (List[int]): 8비트 BGR 컬러코드
+        """ 16진수 -> 10진수 8비트 컬러코드(BGR888)로 변환.
+
+            Args:
+                hex (int): 16진수 컬러코드.
+
+            Returns:
+                (List[int]): 8비트 BGR 색상 코드 [B,G,R].
         """
         return Colors._convert(hex)[::-1]
 

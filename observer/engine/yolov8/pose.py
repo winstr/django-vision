@@ -166,6 +166,7 @@ class DefaultPose():
                 color_shade (int):
                     컬러 음영값. 낮을 수록 밝은 색. 이 값은 임의로 지정될 수 없고,
                     observer.utils.color.Colors에 정의된 값들만 사용해야 함.
+                    [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].
                 kpts_connection_map (dict): 키포인트 연결맵.
 
             Returns:
