@@ -14,16 +14,19 @@ def plot_text(img: np.ndarray,
               background_color: Tuple[int, int, int] = None
     ) -> None:
     """ 입력 이미지에 텍스트를 그린다.
-    ----------------------------
-    Args:
-        img (np.ndarray): numpy 배열 형태의 입력 이미지.
-        text (str): 텍스트 내용.
-        text_origin (Tuple[int, int]): 텍스트 원점 x, y 좌표(좌상단).
-        text_color (Tuple[int, int, int]): 텍스트 컬러.
-        text_scale (float): 텍스트 스케일.
-        text_style (int): 텍스트 스타일(fontFace).
-        text_thickness (int): 텍스트 두께.
-        background_color (Tuple[int, int, int]): 배경 컬러.
+
+        Args:
+            img (np.ndarray): numpy 배열 형태의 입력 이미지.
+            text (str): 텍스트 내용.
+            text_origin (Tuple[int, int]): 텍스트 원점 x, y 좌표(좌상단).
+            text_color (Tuple[int, int, int]): 텍스트 컬러.
+            text_scale (float): 텍스트 스케일.
+            text_style (int): 텍스트 스타일(fontFace).
+            text_thickness (int): 텍스트 두께.
+            background_color (Tuple[int, int, int]): 배경 컬러.
+
+        Returns:
+            None
     """
     # 텍스트의 가로 세로 사이즈를 계산한다.
     (text_width, text_height), _ = cv2.getTextSize(text,
