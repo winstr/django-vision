@@ -29,8 +29,8 @@ def to_http_multipart(jpeg: bytes):
 
 
 def generate_jpeg():
-    pose_estimator = PoseEstimator()
-    vframe_skipper = VideoFrameSkipper(skip_interval=3)
+    estimator = PoseEstimator()
+    skipper = VideoFrameSkipper(skip_interval=3)
 
     preds = None
     with VideoCapture(source) as cap:
@@ -38,12 +38,11 @@ def generate_jpeg():
             for frame in cap:
                 frame = cv2.resize(frame, (640, 480))
 
-                skip = next(vframe_skipper)
+                skip = next(skipper)
                 if not skip:
-                    preds = pose_estimator.estimate(
-                        frame, enable_tracking=True,  verbose=False)
+                    preds = estimator.track(frame, persist=True, verbose=False)
+                DefaultPose.plot(frame, preds, track_on=True)
 
-                DefaultPose.plot(frame, preds, enable_tracking=True)
                 jpeg = to_jpeg(frame)
                 data = to_http_multipart(jpeg)
                 yield data
@@ -59,6 +58,8 @@ def video():
 
 
 if __name__ == '__main__':
+    # python3 app.py 'rtsp://127.0.0.1:554/...'
+
     parser = argparse.ArgumentParser()
     parser.add_argument('source', type=str)
 
