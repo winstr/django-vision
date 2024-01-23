@@ -1,4 +1,4 @@
-from typing import Tuple, List, Any
+from typing import Tuple, Dict, List, Any
 
 import cv2
 import numpy as np
@@ -11,119 +11,115 @@ from observer.utils.plotting import plot_text
 def plot_box(
         img: np.ndarray,
         box: np.ndarray,
-        box_color: Tuple[int, int, int],
-        box_thickness: int = 1,
-        box_conf_thres: float = 0.5,
-        category_map: dict = None,
-        with_text: bool = True
+        color: Tuple[int, int, int],
+        thick: int = 1,
+        thres: float = 0.5,
+        lbmap: Dict[int, str] = None,
+        annot_on: bool = True,
     ) -> None:
+
     """ 입력 이미지에 바운딩 박스를 그린다.
 
-        Args:
-            img (np.ndarray): numpy 배열 형태의 입력 이미지.
-            box (np.ndarray):
-                numpy 배열 형태의 바운딩 박스. shape은 (7,)이며, 요소는
-                [x_min, y_min, x_max, y_max, box_id, confidence,
-                category_id]이다. 
-            box_color (Tuple[int, int, int]): 바운딩 박스 컬러.
-            box_thickness (int): 바운딩 박스 경계선 두께.
-            box_conf_thres (float): 바운딩 박스 컨피던스 임계값.
-            category_map (dict):
-                카테고리 ID가 주어졌을 때, 해당 카테고리의 이름을 반환하는
-                사전 객체. {key(id: int) : value(name: str), ...}
-                형태로 제공되어야 함.
-            with_text (bool):
-                참일 경우, 텍스트를 추가한다. 텍스트는 카테고리 이름(만약에
-                category_map이 주어지지 않았다면 카테고리 ID), 박스 ID,
-                컨피던스 스코어(소수점 3자리까지)로 구성된다.
+    Args:
+        img (np.ndarray): numpy 배열 입력 이미지.
+        box (np.ndarray): numpy 배열 바운딩 박스.
+            아래 두 가지 box 구성 중 하나를 반드시 만족해야 함(차이: box_id의 유무).
+            1) [x_min, y_min, x_max, y_max, box_id, confidence, label_id]
+            2) [x_min, y_min, x_max, y_max, confidence, label_id]
+        color (Tuple[int, int, int]): 바운딩 박스 BGR 색상 코드.
+        thick (int): 바운딩 박스 경계선 두께.
+        thres (float): 바운딩 박스 컨피던스 임계값. 임계값 미만의 박스는 그리지 않음.
+        lbmap (Dict[int, str]): 레이블 맵. 키는 레이블 ID, 값은 레이블 이름.
+        annot_on (bool): 참인 경우, 텍스트(카테고리, 컨피던스 등)를 박스위에 추가함.
 
-        Returns:
-            None
+    Returns:
+        None
     """
-    conf = box[5]
-    if conf < box_conf_thres:
+
+    conf = box[5] if len(box) == 7 else box[4]
+    if conf < thres:
         return
 
     xyxy = tuple(box[:4].astype(int))
     pt1, pt2 = xyxy[:2], xyxy[2:]
-    cv2.rectangle(img, pt1, pt2, box_color, box_thickness)
+    cv2.rectangle(img, pt1, pt2, color, thick)
 
-    if with_text:
-        bid, cid = int(box[4]), int(box[6])  # box id, category id.
-        if category_map is not None:
-            cid = category_map[cid]
+    if not annot_on:
+        return
 
-        text = f'{cid}, {bid}, {conf:.3f}'
-        text_color = (0, 0, 0)  # black.
-        plot_text(img, text, pt1, text_color, background_color=box_color)
+    box_id = box[4] if len(box) == 7 else 0
+
+    label_id = box[-1]
+    if lbmap is not None:
+        label_id = lbmap[label_id]
+
+    annot = f'{label_id}, {box_id}, {conf:.2f}'
+    plot_text(img, annot, pt1, (0, 0, 0), bgcolor=color)
+
+    '''
+    def plot_text(
+              img: np.ndarray,
+              text: str,
+              text_origin: Tuple[int, int],
+              text_color: Tuple[int, int, int],
+              text_scale: float = 0.5,
+              text_style: int = cv2.FONT_HERSHEY_SIMPLEX,
+              text_thickness: int = 1,
+              background_color: Tuple[int, int, int] = None
+    ) -> None:
+    '''
 
 
 def plot_pose(
         img: np.ndarray,
         kpts: np.ndarray,
-        kpts_color: Tuple[int, int, int],
-        kpts_connection_map: dict,
-        connection_color: Tuple[int, int, int],
-        connection_thickness: int = 1,
-        kpts_radius: int = 2,
-        kpts_conf_thres: float = 0.5,
+        color: Tuple[int, int, int],
+        cnmap: Dict[int, List[int]],
+        thick: int = 1,
+        radius: int = 2,
+        thres: float = 0.5,
     ) -> None:
-    """ 입력 이미지에 자세를 그린다.
 
-        Args:
-            img (np.ndarray): numpy 배열 형태의 입력 이미지.
-            kpts (np.ndarray):
-                numpy 배열 형태의 키포인트 세트. shape은 (17, 3)이고,
-                행은 키포인트 부위(nose, left_eye, right_eye 등)이며,
-                열은 [x, y, confidence]이다.
-            kpts_color (Tuple[int, int, int]): 키포인트 컬러.
-            kpts_connection_map (dict):
-                어떤 키포인트의 ID가 주어졌을 때, 이 키포인트와 상호 연결된
-                키포인트들의 ID 목록을 반환하는 사전 객체. {key(id: int)
-                : value(connections: list)} 형태로 제공되어야 함.
-            connection_color (Tuple[int, int, int]): 연결선 컬러.
-            connection_thickness (int): 연결선 두께.
-            kpts_radius (int): 키포인트 반지름.
-            kpts_conf_thres (float): 키포인트 컨피던스 임계값.
+    """ 입력 이미지에 자세(pose)를 그린다.
 
-        Returns:
-            None
+    Args:
+        img (np.ndarray): numpy 배열 형태의 입력 이미지.
+        kpts (np.ndarray): numpy 배열 형태의 키포인트 세트.
+            행은 키포인트 부위(nose, left_eye, right_eye 등)이며,
+            열은 [x, y, confidence]임. 열 구성은 반드시 지켜야 함.
+        color (Tuple[int, int, int]): 자세 BGR 색상 코드.
+        cnmap (Dict[int, List[int]]): 키포인트 연결맵.
+            키는 시작점 키포인트 ID, 값은 끝점 키포인트들의 ID 목록.
+        thick (int): 키포인트 연결선 두께.
+        radius (int): 키포인트 반지름.
+        thres (float): 키포인트 컨피던스 임계값.
+
+    Returns:
+        None
     """
+
     xy = kpts[:, :2].astype(int)
     conf = kpts[:, 2]
 
     for i in range(len(kpts)):
-        if conf[i] < kpts_conf_thres:
+        if conf[i] < thres:
             continue
         pt1 = tuple(xy[i])
 
-        for j in kpts_connection_map[i]:
-            if conf[j] < kpts_conf_thres:
+        for j in cnmap[i]:
+            if conf[j] < thres:
                 continue
             pt2 = tuple(xy[j])
 
-            # 모든 연결선(line)을 그린 후 키포인트(circle)를 그리는 순서로 진행한다.
-            # 그렇지 않으면 키포인트 위에 연결선이 그려져 시각적으로 보기에 예쁘지 않다.
-            cv2.line(img, pt1, pt2, connection_color, connection_thickness)
-        cv2.circle(img, pt1, kpts_radius, kpts_color, cv2.FILLED)
+            cv2.line(img, pt1, pt2, color, thick)
+        cv2.circle(img, pt1, radius, color, cv2.FILLED)
 
 
 class DefaultPose():
 
-    """ Yolov8 자세 클래스. 인스턴스 생성 불가능.
+    """ Yolov8 자세 클래스. """
 
-        Static Attributes:
-            kpts_connection_map (dict)
-            category_map (dict)
-
-        Static Methods:
-            plot(...) -> None
-    """
-
-    # 키포인트들의 ID 목록을 반환하는 사전 객체. key는
-    # 특정 키포인트 ID를, value는 이 키포인트와 연결된,
-    # 다른 키포인트들의 ID 목록을 의미.
-    kpts_connection_map = {
+    default_cnmap = {
         0: [1, 2],
         1: [3],
         2: [4],
@@ -142,9 +138,9 @@ class DefaultPose():
         15: [],
         16: []
     }
-    # 카테고리 ID 별 카테고리 이름을 반환하는 사전 객체.
-    category_map = {
-        0: 'Person',
+
+    default_lbmap = {
+        0: 'Person'
     }
 
     def __init__(self):
@@ -155,43 +151,48 @@ class DefaultPose():
     def plot(
             img: np.ndarray,
             preds: List[Results],
-            enable_tracking: bool = False,
-            color_shade: int = 500,
-            kpts_connection_map: dict = kpts_connection_map,
-            category_map: dict = category_map,
+            cnmap: dict = default_cnmap,
+            lbmap: dict = default_lbmap,
+            shade: int = 500,
+            track_on: bool = False,
+            box_thres: float = 0.5,
+            kpts_thres: float = 0.5
         ) -> None:
-        """ 입력 이미지에 모든 객체들의 바운딩 박스와 자세를 그린다.
 
-            Args:
-                img (np.ndarray): numpy 배열 형태의 입력 이미지.
-                preds (List[Results]): 자세 추정 결과.
-                enable_tracking (bool):
-                    참일 경우, 바운딩 박스 ID를 이용하여 개별 추적 객체들의 색상을
-                    결정한다. 거짓일 경우, 모든 객체들의 색상은 동일한 색으로 통일.
-                color_shade (int):
-                    컬러 음영값. 낮을 수록 밝은 색. 이 값은 임의로 지정될 수 없고,
-                    observer.utils.color.Colors에 정의된 값들만 사용해야 함.
-                    [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].
-                kpts_connection_map (dict): 키포인트 연결맵.
+        """ 입력 이미지에 모든 객체들의 바운딩 박스와 자세를 그림.
 
-            Returns:
-                None
+        Args:
+            img (np.ndarray): numpy 배열 형태의 입력 이미지.
+            preds (List[Results]): 자세 추정 결과.
+            cnmap (Dict[int, List[int]]): 키포인트 연결맵.
+                키는 시작점 키포인트 ID, 값은 끝점 키포인트들의 ID 목록.
+            lbmap (Dict[int, str]): 레이블 맵.
+                키는 레이블 ID, 값은 레이블 이름.
+            shade (int):
+                색상 음영값. 낮을수록 밝은 색. 이 값은 임의로 지정될 수 없고,
+                observer.utils.color.Colors에 정의된 값들만 사용 가능.
+                [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+            track_on (bool): 참일 경우, 객체들의 색상 표현이 달라짐.
+
+        Returns:
+            None
         """
+
         from observer.utils.color import Colors
 
         results = preds[0]
         boxes = results.boxes.data.cpu().numpy()
         kptss = results.keypoints.data.cpu().numpy()
 
-        colors = Colors.to_bgr(Colors.green[color_shade])
-        if enable_tracking:
-            colors = [color[color_shade] for color in Colors.all_colors]
+        colors = Colors.to_bgr(Colors.green[shade])
+        if track_on:
+            colors = [color[shade] for color in Colors.all_colors]
             colors = [Colors.to_bgr(color) for color in colors]
 
         for i, (box, kpts) in enumerate(zip(boxes, kptss)):
-            color = colors[i % len(colors)] if enable_tracking else colors
-            plot_box(img, box, color, category_map=category_map)
-            plot_pose(img, kpts, color, kpts_connection_map, color)
+            color = colors[i % len(colors)] if track_on else colors
+            plot_box(img, box, color, thres=box_thres, lbmap=lbmap)
+            plot_pose(img, kpts, color, cnmap, thres=kpts_thres)
 
 
 class PoseEstimator(YOLO):
@@ -201,24 +202,4 @@ class PoseEstimator(YOLO):
     def __init__(self, model: str = 'yolov8n-pose.pt'):
         super().__init__(model, task=None)
 
-    def estimate(self,
-                img: np.ndarray,
-                enable_tracking: bool = False,
-                **kwargs: List[Any]
-        )-> List[Results]:
-        """ 입력 이미지에 대하여 자세 추정을 수행.
-
-            Args:
-                img (np.ndarray): numpy 배열 형태의 입력 이미지.
-                enalbe_tracking (bool): 참일 경우, 추적 활성화.
-                **kwargs (List[Any]):
-                    키워드 인자값들. 세부 내용은 부모 클래스 소스코드
-                    참조. e.g. verbose=False, etc.
-            Returns:
-                preds (List[Results]): 자세 추정 결과.
-        """
-        if enable_tracking:
-            preds = super().track(img, persist=True, **kwargs)
-        else:
-            preds = super().predict(img, **kwargs)
-        return preds
+    # TODO
