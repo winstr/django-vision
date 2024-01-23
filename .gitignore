@@ -6,3 +6,4 @@ config/ffmpeg_.json
 *.png
 *.jpg
 *.gif
+!examples/imgs
