@@ -1,15 +1,13 @@
-import argparse
 import traceback
 
 import cv2
 import flask
 
-from observer.utils.video import VideoFrameSkipper, VideoCapture
-from observer.engine.yolov8.pose import DefaultPose, PoseEstimator
+from observer.utils.video import SkipFlags, VideoCapture
+from observer.engine.yolov8.pose import Pose, PoseEstimator
 
 
 app = flask.Flask(__name__)
-source: str = None
 
 
 def to_jpeg(frame):
@@ -28,42 +26,40 @@ def to_http_multipart(jpeg: bytes):
         b'\r\n')
 
 
-def generate_jpeg():
-    estimator = PoseEstimator()
-    skipper = VideoFrameSkipper(skip_interval=3)
+def main():
+    source = 'rtsp://192.168.1.101:554/profile2/media.smp'
+    resize = (640, 480)
+    interval = 3
+    track_on = True
 
-    preds = None
-    with VideoCapture(source) as cap:
-        try:
-            for frame in cap:
-                frame = cv2.resize(frame, (640, 480))
+    try:
+        estimator = PoseEstimator()
+        skipflags = SkipFlags(interval=interval)
+        cap = VideoCapture(source)
+        preds = None
 
-                skip = next(skipper)
-                if not skip:
-                    preds = estimator.track(frame, persist=True, verbose=False)
-                DefaultPose.plot(frame, preds, track_on=True)
+        for frame in cap:
+            frame = cv2.resize(frame, resize)
 
-                jpeg = to_jpeg(frame)
-                data = to_http_multipart(jpeg)
-                yield data
-        except:
-            traceback.print_exc()
+            if not next(skipflags):
+                preds = estimator.estimate(frame, track_on)
+            Pose.plot(frame, preds)
+
+            jpeg = to_jpeg(frame)
+            data = to_http_multipart(jpeg)
+            yield data
+
+    except:
+        traceback.print_exc()
+
+    cap.release()
 
 
 @app.route('/video')
 def video():
     return flask.Response(
-        generate_jpeg(),
-        mimetype='multipart/x-mixed-replace; boundary=frame')
+        main(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':
-    # python3 app.py 'rtsp://127.0.0.1:554/...'
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('source', type=str)
-
-    args = parser.parse_args()
-    source = args.source
-
     app.run(host='0.0.0.0', port=8080)
