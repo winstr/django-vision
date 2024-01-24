@@ -23,7 +23,7 @@ def plot_text(img: np.ndarray,
             scale (float): 텍스트 스케일.
             style (int): 텍스트 스타일(fontFace).
             thick (int): 텍스트 두께.
-            background_color (Tuple[int, int, int]): 배경 컬러.
+            bgcolor (Tuple[int, int, int]): 배경 컬러.
 
         Returns:
             None
