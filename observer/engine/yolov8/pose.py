@@ -56,19 +56,6 @@ def plot_box(
     annot = f'{label_id}, {box_id}, {conf:.2f}'
     plot_text(img, annot, pt1, (0, 0, 0), bgcolor=color)
 
-    '''
-    def plot_text(
-              img: np.ndarray,
-              text: str,
-              text_origin: Tuple[int, int],
-              text_color: Tuple[int, int, int],
-              text_scale: float = 0.5,
-              text_style: int = cv2.FONT_HERSHEY_SIMPLEX,
-              text_thickness: int = 1,
-              background_color: Tuple[int, int, int] = None
-    ) -> None:
-    '''
-
 
 def plot_pose(
         img: np.ndarray,
