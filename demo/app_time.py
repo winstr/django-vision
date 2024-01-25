@@ -1,13 +1,33 @@
+import time
 import traceback
 
 import cv2
 import flask
 
+from observer.utils.plotting import plot_text
 from observer.utils.video import SkipFlags, VideoCapture
 from observer.engine.yolov8.pose import PoseEstimator, plot_pose
 
 
 app = flask.Flask(__name__)
+
+
+class Timer():
+
+    @staticmethod
+    def _to_strftime(elapsed_time):
+        hours, remainder = divmod(elapsed_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
+
+    def __init__(self):
+        self.init_time = time.time()
+    
+    def _elapsed(self):
+        return time.time() - self.init_time
+
+    def strftime(self):
+        return self._to_strftime(self._elapsed())
 
 
 def to_jpeg(frame):
@@ -33,6 +53,7 @@ def main():
     track_on = True
 
     try:
+        timer = Timer()
         estimator = PoseEstimator()
         skipflags = SkipFlags(interval=interval)
         cap = VideoCapture(source)
@@ -44,6 +65,9 @@ def main():
             if not next(skipflags):
                 preds = estimator.estimate(frame, track_on, verbose=False)
             plot_pose(frame, preds)
+
+            strftime = timer.strftime()
+            plot_text(frame, strftime, (10, 10), (255, 255, 255))
 
             jpeg = to_jpeg(frame)
             data = to_http_multipart(jpeg)
