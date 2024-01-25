@@ -4,7 +4,7 @@ import cv2
 import flask
 
 from observer.utils.video import SkipFlags, VideoCapture
-from observer.engine.yolov8.pose import Pose, PoseEstimator
+from observer.engine.yolov8.pose import PoseEstimator, plot_pose
 
 
 app = flask.Flask(__name__)
@@ -42,8 +42,8 @@ def main():
             frame = cv2.resize(frame, resize)
 
             if not next(skipflags):
-                preds = estimator.estimate(frame, track_on)
-            Pose.plot(frame, preds)
+                preds = estimator.estimate(frame, track_on, verbose=False)
+            plot_pose(frame, preds)
 
             jpeg = to_jpeg(frame)
             data = to_http_multipart(jpeg)
