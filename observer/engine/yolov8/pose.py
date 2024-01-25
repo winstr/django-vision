@@ -1,3 +1,4 @@
+import time
 from typing import Tuple, Dict, List
 
 import cv2
@@ -8,7 +9,7 @@ from ultralytics.engine.results import Results
 from observer.utils.plotting import plot_text
 
 
-default_cnmap = {
+DEFAULT_CNMAP = {
     0: [1, 2],
     1: [3],
     2: [4],
@@ -28,12 +29,12 @@ default_cnmap = {
     16: []
 }
 
-default_lbmap = {
+DEFAULT_LBMAP = {
     0: 'Person'
 }
 
 
-def plot_box(
+def _plot_box(
         img: np.ndarray,
         box: np.ndarray,
         color: Tuple[int, int, int],
@@ -64,7 +65,7 @@ def plot_box(
     plot_text(img, annot, pt1, (0, 0, 0), bgcolor=color)
 
 
-def plot_pose(
+def _plot_kpts(
         img: np.ndarray,
         kpts: np.ndarray,
         color: Tuple[int, int, int],
@@ -91,45 +92,39 @@ def plot_pose(
         cv2.circle(img, pt1, radius, color, cv2.FILLED)
 
 
-class Pose():
+def plot_pose(
+        img: np.ndarray,
+        preds: List[Results],
+        cnmap: dict = DEFAULT_CNMAP,
+        lbmap: dict = DEFAULT_LBMAP,
+        shade: int = 500,
+        box_thres: float = 0.5,
+        kpts_thres: float = 0.5
+    ) -> None:
 
-    def __init__(self):
-        raise RuntimeError('instance cannot be created.')
+    from observer.utils.color import Colors
 
-    @staticmethod
-    def plot(
-            img: np.ndarray,
-            preds: List[Results],
-            cnmap: dict = default_cnmap,
-            lbmap: dict = default_lbmap,
-            shade: int = 500,
-            box_thres: float = 0.5,
-            kpts_thres: float = 0.5
-        ) -> None:
+    results = preds[0]
+    boxes = results.boxes.data.cpu().numpy()
+    kptss = results.keypoints.data.cpu().numpy()
 
-        from observer.utils.color import Colors
+    n_cols = boxes.shape[-1]
+    if n_cols == 7:
+        track_on = True
+    elif n_cols == 6:
+        track_on = False
+    else:
+        raise RuntimeError()
 
-        results = preds[0]
-        boxes = results.boxes.data.cpu().numpy()
-        kptss = results.keypoints.data.cpu().numpy()
+    colors = [Colors.to_bgr(Colors.green[shade])]
+    if track_on:
+        colors = [color[shade] for color in Colors.all_colors]
+        colors = [Colors.to_bgr(color) for color in colors]
 
-        n_cols = boxes.shape[-1]
-        if n_cols == 7:
-            track_on = True
-        elif n_cols == 6:
-            track_on = False
-        else:
-            raise RuntimeError()
-        
-        colors = [Colors.to_bgr(Colors.green[shade])]
-        if track_on:
-            colors = [color[shade] for color in Colors.all_colors]
-            colors = [Colors.to_bgr(color) for color in colors]
-
-        for i, (box, kpts) in enumerate(zip(boxes, kptss)):
-            color = colors[i % len(colors)] if track_on else colors
-            plot_box(img, box, color, thres=box_thres, lbmap=lbmap)
-            plot_pose(img, kpts, color, cnmap, thres=kpts_thres)
+    for i, (box, kpts) in enumerate(zip(boxes, kptss)):
+        color = colors[i % len(colors)] if track_on else colors
+        _plot_box(img, box, color, thres=box_thres, lbmap=lbmap)
+        _plot_kpts(img, kpts, color, cnmap, thres=kpts_thres)
 
 
 class PoseEstimator(YOLO):
@@ -137,8 +132,8 @@ class PoseEstimator(YOLO):
     def __init__(self, model: str = 'yolov8n-pose.pt'):
         super().__init__(model, task=None)
 
-    def estimate(self, img: np.ndarray, track_on: bool = False, **kwargs):
+    def estimate(self, img: np.ndarray, track_on: bool, **kwargs):
         if track_on:
-            return super().track(img, persist=True, verbose=False)
+            return super().track(img, persist=True, **kwargs)
         else:
-            return super().predict(img, verbose=False)
+            return super().predict(img, **kwargs)
