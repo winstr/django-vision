@@ -7,7 +7,7 @@ import numpy as np
 def plot_text(img: np.ndarray,
               txt: str,
               org: Tuple[int, int],
-              color: Tuple[int, int, int],
+              color: Tuple[int, int, int] = (255, 255, 255),
               scale: float = 0.5,
               style: int = cv2.FONT_HERSHEY_SIMPLEX,
               thick: int = 1,
