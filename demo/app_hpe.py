@@ -30,22 +30,23 @@ def to_http_multipart(jpeg: bytes):
 
 
 def main():
-    source = 'rtsp://192.168.1.101:554/profile2/media.smp'
-    resize = (640, 480)
-    interval = 3
-    track_on = True
+    video_source = 'rtsp://192.168.1.101:554/profile2/media.smp'
+    target_size = (640, 480)
+    skip_interval = 3
 
     try:
         estimator = PoseEstimator()
-        skipflags = SkipFlags(interval=interval)
-        cap = VideoCapture(source)
+        skip_flags = SkipFlags(skip_interval)
         preds = None
 
-        for frame in cap:
-            frame = cv2.resize(frame, resize)
+        cap = VideoCapture(video_source)
+        while True:
+            frame = next(cap)
+            frame = cv2.resize(frame, target_size)
 
-            if not next(skipflags):
-                preds = estimator.estimate(frame, track_on, verbose=False)
+            skip_on = next(skip_flags)
+            if not skip_on:
+                preds = estimator.estimate(frame, verbose=False)
             plot_pose(frame, preds)
 
             jpeg = to_jpeg(frame)
@@ -55,13 +56,15 @@ def main():
     except:
         traceback.print_exc()
 
-    cap.release()
+    finally:
+        cap.release()
 
 
 @app.route('/video')
 def video():
     return flask.Response(
-        main(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        main(),
+        mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':

@@ -2,16 +2,16 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Iterable
 
 import cv2
 import flask
 
 sys.path.append(str(Path(__file__).parents[1]))
-from observer.utils.color import Colors
+from observer.utils.color import ALL_COLORS, hex_to_bgr
 from observer.utils.video import SkipFlags, VideoCapture
 from observer.utils.plotting import plot_text
-from observer.engine.yolov8.pose import PoseEstimator, _plot_kpts
-from observer.engine.yolov8.pose import DEFAULT_CNMAP
+from observer.engine.yolov8.pose import PoseEstimator
 
 
 app = flask.Flask(__name__)
@@ -35,71 +35,67 @@ def to_http_multipart(jpeg: bytes):
 
 class Timer():
 
+    prev_timer_ids = set()
+    curr_timer_ids = set()
+    timers = {}
+
+    @staticmethod
+    def syncronize(object_ids: Iterable[int]):
+        object_ids = set(object_ids)
+        for object_id in Timer.prev_timer_ids - object_ids:
+            del Timer.timers[object_id]
+        for object_id in object_ids - Timer.prev_timer_ids:
+            Timer.timers[object_id] = Timer()
+        Timer.prev_timer_ids = object_ids
+
     def __init__(self):
         self.start_time = time.time()
 
     def get_elapsed_time(self) -> str:
         elapsed_time = time.time() - self.start_time
-        hours, remainder = divmod(elapsed_time, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        elapsed_time_str = f'{int(hours):02}:{int(minutes):02}:{int(seconds):02}'
-        return elapsed_time_str
+        h, r = divmod(elapsed_time, 3600)
+        m, s = divmod(r, 60)
+        return f'{int(h):02}:{int(m):02}:{int(s):02}'
 
 
 def main():
-    source = 'rtsp://192.168.1.101:554/profile2/media.smp'
-    resize = (640, 480)
-    interval = 3
-    track_on = True
-    shade = 300
+    video_source = 'rtsp://192.168.1.101:554/profile2/media.smp'
+    target_size = (640, 480)
+    skip_interval = 3
 
     try:
         estimator = PoseEstimator()
-        skipflags = SkipFlags(interval=interval)
-        cap = VideoCapture(source)
-        prev_box_ids = set()
-        timers = {}
+        skip_flags = SkipFlags(skip_interval)
+        boxes = None
 
-        colors = [color[shade] for color in Colors.all_colors]
-        colors = [Colors.to_bgr(color) for color in colors]
+        colors = [hex_to_bgr(hex_color[500])
+                  for hex_color in ALL_COLORS]
 
-        preds = None
-        for frame in cap:
-            frame = cv2.resize(frame, resize)
+        cap = VideoCapture(video_source)
+        while True:
+            frame = next(cap)
+            frame = cv2.resize(frame, target_size)
 
-            if not next(skipflags):
-                preds = estimator.estimate(frame, track_on, verbose=False)
-                current_box_ids = set(preds[0].boxes.data.cpu().numpy()[:, 4].astype(int))
+            skip_on = next(skip_flags)
+            if not skip_on:
+                preds = estimator.estimate(frame, verbose=False)
+                boxes = preds[0].boxes.data.cpu().numpy()
+                box_ids = boxes[:, 4].astype(int)
+                Timer.syncronize(box_ids)
 
-                dis_box_ids = prev_box_ids - current_box_ids
-                for box_id in dis_box_ids:
-                    del timers[box_id]
-                
-                new_box_ids = current_box_ids - prev_box_ids
-                for box_id in new_box_ids:
-                    timers[box_id] = Timer()
+            for i, box in enumerate(boxes):
+                color = colors[i % len(colors)]
+                xyxy = tuple(box[:4].astype(int))
+                pt1, pt2 = xyxy[:2], xyxy[2:]
+                cv2.rectangle(frame, pt1, pt2, color, thickness=1)
 
-                prev_box_ids = current_box_ids
-
-            if not preds is None:
-                results = preds[0]
-                boxes = results.boxes.data.cpu().numpy()
-                kptss = results.keypoints.data.cpu().numpy()
-
-                #for i, box in enumerate(boxes):
-                for i, (box, kpts) in enumerate(zip(boxes, kptss)):
-                    color = colors[i % len(colors)]
-                    xyxy = tuple(box[:4].astype(int))
-                    pt1, pt2 = xyxy[:2], xyxy[2:]
-                    cv2.rectangle(frame, pt1, pt2, color, thickness=1)
-
-                    _plot_kpts(frame, kpts, color, DEFAULT_CNMAP)
-
-                    box_id = int(box[4])
-                    box_conf = f'{(box[5]*100):.2f}%'
-                    box_time = timers[box_id].get_elapsed_time()
-                    plot_text(frame, f'Person, {box_conf}, {box_time}', pt1,
-                              color=(0, 0, 0), bgcolor=color)
+                box_id = int(box[4])
+                box_conf = f'{(box[5] * 100):.2f}%'
+                box_time = Timer.timers[box_id].get_elapsed_time()
+                plot_text(frame,
+                          f'Person, {box_conf}, {box_time}',
+                          pt1,
+                          bgcolor=color)
 
             jpeg = to_jpeg(frame)
             data = to_http_multipart(jpeg)
