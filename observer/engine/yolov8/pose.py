@@ -93,7 +93,7 @@ class PoseEstimator(YOLO):
     def __init__(self, model: str = 'yolov8n-pose.pt'):
         super().__init__(model, task=None)
 
-    def estimate(self, img: np.ndarray, track_on: bool, **kwargs):
+    def estimate(self, img: np.ndarray, track_on: bool = True, **kwargs):
         if track_on:
             return super().track(img, persist=True, **kwargs)
         else:
