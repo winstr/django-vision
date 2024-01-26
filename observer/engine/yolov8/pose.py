@@ -1,4 +1,3 @@
-import time
 from typing import Tuple, Dict, List
 
 import cv2
@@ -9,122 +8,84 @@ from ultralytics.engine.results import Results
 from observer.utils.plotting import plot_text
 
 
-DEFAULT_CNMAP = {
-    0: [1, 2],
-    1: [3],
-    2: [4],
-    3: [],
-    4: [],
-    5: [6, 7, 11],
-    6: [8, 12],
-    7: [9],
-    8: [10],
-    9: [],
-    10: [],
-    11: [12, 13],
-    12: [14],
-    13: [15],
-    14: [16],
-    15: [],
-    16: []
-}
-
-DEFAULT_LBMAP = {
-    0: 'Person'
-}
-
-
-def _plot_box(
-        img: np.ndarray,
-        box: np.ndarray,
-        color: Tuple[int, int, int],
-        thick: int = 1,
-        thres: float = 0.5,
-        lbmap: Dict[int, str] = None,
-        annot_on: bool = True,
-    ) -> None:
-
-    conf = box[5] if len(box) == 7 else box[4]
-    if conf < thres:
-        return
-
-    xyxy = tuple(box[:4].astype(int))
-    pt1, pt2 = xyxy[:2], xyxy[2:]
-    cv2.rectangle(img, pt1, pt2, color, thick)
-
-    if not annot_on:
-        return
-
-    box_id = box[4] if len(box) == 7 else 0
-
-    label_id = box[-1]
-    if lbmap is not None:
-        label_id = lbmap[label_id]
-
-    annot = f'{label_id}, {box_id}, {conf:.2f}'
-    plot_text(img, annot, pt1, (0, 0, 0), bgcolor=color)
-
-
-def _plot_kpts(
-        img: np.ndarray,
-        kpts: np.ndarray,
-        color: Tuple[int, int, int],
-        cnmap: Dict[int, List[int]],
-        thick: int = 1,
-        radius: int = 2,
-        thres: float = 0.5,
-    ) -> None:
-
-    xy = kpts[:, :2].astype(int)
-    conf = kpts[:, 2]
-
-    for i in range(len(kpts)):
-        if conf[i] < thres:
-            continue
-        pt1 = tuple(xy[i])
-
-        for j in cnmap[i]:
-            if conf[j] < thres:
-                continue
-            pt2 = tuple(xy[j])
-
-            cv2.line(img, pt1, pt2, color, thick)
-        cv2.circle(img, pt1, radius, color, cv2.FILLED)
+CATEGORY_MAP = {0: 'Person'}
+KEYPOINT_MAP = {
+    0: ('nose', (1, 2,)),
+    1: ('l_eye', (3,)),
+    2: ('r_eye', (4,)),
+    3: ('l_ear', ()),
+    4: ('r_ear', ()),
+    5: ('l_shoulder', (6, 7, 11,)),
+    6: ('r_shoulder', (8, 12,)),
+    7: ('l_elbow', (9,)),
+    8: ('r_elbow', (10,)),
+    9: ('l_wrist', ()),
+    10: ('r_wrist', ()),
+    11: ('l_hip', (12, 13,)),
+    12: ('r_hip', (14,)),
+    13: ('l_knee', (15,)),
+    14: ('r_knee', (16,)),
+    15: ('l_ankle', ()),
+    16: ('r_ankle', ()),}
 
 
 def plot_pose(
         img: np.ndarray,
         preds: List[Results],
-        cnmap: dict = DEFAULT_CNMAP,
-        lbmap: dict = DEFAULT_LBMAP,
         shade: int = 500,
-        box_thres: float = 0.5,
-        kpts_thres: float = 0.5
+        category_map: Dict[int, str] = CATEGORY_MAP,
+        keypoint_map: Dict[int, Tuple[str, List[int]]] = KEYPOINT_MAP,
+        box_conf_thres: float = 0.5,
+        box_border_thick: int = 1,
+        kpts_conf_thres: float = 0.5,
+        kpts_radius: int = 2,
+        kpts_limbs_thick: int = 1,
     ) -> None:
 
-    from observer.utils.color import Colors
+    # 입력 이미지에 객체 바운딩 박스 및 자세를 표시한다.
+
+    def plot_bounding_box(box, color):
+        conf = box[5] if len(box) == 7 else box[4]
+        if conf < box_conf_thres:
+            return
+        xyxy = tuple(box[:4].astype(int))
+        pt1, pt2 = xyxy[:2], xyxy[2:]
+        cv2.rectangle(img, pt1, pt2, color, box_border_thick)
+        category = category_map[box[-1]]
+        annot = f'{category}, {(conf * 100):.2f}%'
+        plot_text(img, annot, pt1, bgcolor=color)
+
+    def plot_keypoints(kpts, color):
+        xy = kpts[:, :2].astype(int)
+        conf = kpts[:, 2]
+        for i in range(len(kpts)):
+            if conf[i] < kpts_conf_thres:
+                continue
+            pt1 = tuple(xy[i])
+            for j in keypoint_map[i][1]:
+                if conf[j] < kpts_conf_thres:
+                    continue
+                pt2 = tuple(xy[j])
+                cv2.line(img, pt1, pt2, color, kpts_limbs_thick)
+            cv2.circle(img, pt1, kpts_radius, color, cv2.FILLED)
+
+    from observer.utils.color import GREEN, ALL_COLORS, hex_to_bgr
 
     results = preds[0]
     boxes = results.boxes.data.cpu().numpy()
     kptss = results.keypoints.data.cpu().numpy()
 
-    n_cols = boxes.shape[-1]
-    if n_cols == 7:
-        track_on = True
-    elif n_cols == 6:
-        track_on = False
-    else:
-        raise RuntimeError()
+    track_on = True if boxes.shape[-1] == 7 else False
 
-    colors = [Colors.to_bgr(Colors.green[shade])]
     if track_on:
-        colors = [color[shade] for color in Colors.all_colors]
-        colors = [Colors.to_bgr(color) for color in colors]
+        colors = [hex_to_bgr(color[shade]) for color in ALL_COLORS]
+    else:
+        colors = [hex_to_bgr(GREEN[shade])]
 
     for i, (box, kpts) in enumerate(zip(boxes, kptss)):
-        color = colors[i % len(colors)] if track_on else colors
-        _plot_box(img, box, color, thres=box_thres, lbmap=lbmap)
-        _plot_kpts(img, kpts, color, cnmap, thres=kpts_thres)
+        color = colors[i % len(colors)] if track_on else colors[0]
+        plot_bounding_box(box, color)
+        plot_keypoints(kpts, color)
 
 
 class PoseEstimator(YOLO):
