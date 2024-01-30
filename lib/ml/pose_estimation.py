@@ -5,7 +5,7 @@ import numpy as np
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-from observer.utils.plotting import plot_text
+from utils.plotting import plot_text
 
 
 CATEGORY_MAP = {0: 'Person'}
@@ -42,8 +42,6 @@ def plot_pose(
         kpts_limbs_thick: int = 1,
     ) -> None:
 
-    # 입력 이미지에 객체 바운딩 박스 및 자세를 표시한다.
-
     def plot_bounding_box(box, color):
         conf = box[5] if len(box) == 7 else box[4]
         if conf < box_conf_thres:
@@ -69,7 +67,7 @@ def plot_pose(
                 cv2.line(img, pt1, pt2, color, kpts_limbs_thick)
             cv2.circle(img, pt1, kpts_radius, color, cv2.FILLED)
 
-    from observer.utils.color import GREEN, ALL_COLORS, hex_to_bgr
+    from utils.color import GREEN, ALL_COLORS, hex_to_bgr
 
     results = preds[0]
     boxes = results.boxes.data.cpu().numpy()

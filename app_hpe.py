@@ -1,13 +1,10 @@
-import sys
 import traceback
-from pathlib import Path
 
 import cv2
 import flask
 
-sys.path.append(str(Path(__file__).parents[1]))
-from observer.utils.video import SkipFlags, VideoCapture
-from observer.engine.yolov8.pose import PoseEstimator, plot_pose
+from lib.ml.pose_estimation import PoseEstimator, plot_pose
+from lib.video import SkipFlags, VideoCapture
 
 
 app = flask.Flask(__name__)

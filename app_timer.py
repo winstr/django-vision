@@ -1,17 +1,14 @@
-import sys
 import time
 import traceback
-from pathlib import Path
 from typing import Iterable
 
 import cv2
 import flask
 
-sys.path.append(str(Path(__file__).parents[1]))
-from observer.utils.color import ALL_COLORS, hex_to_bgr
-from observer.utils.video import SkipFlags, VideoCapture
-from observer.utils.plotting import plot_text
-from observer.engine.yolov8.pose import PoseEstimator
+from utils.color import ALL_COLORS, hex_to_bgr
+from utils.plotting import plot_text
+from lib.video import SkipFlags, VideoCapture
+from lib.ml.pose_estimation import PoseEstimator
 
 
 app = flask.Flask(__name__)

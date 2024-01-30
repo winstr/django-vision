@@ -3,9 +3,10 @@ import fnmatch
 from typing import Generator
 
 
-def get_files(name_pattern: str,
-              root_dir: str,
-              recursive: bool=True
+def get_files(
+        name_pattern: str,
+        root_dir: str,
+        recursive: bool=True
     ) -> Generator:
 
     for parent_dir, _, files in os.walk(root_dir):
