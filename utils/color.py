@@ -270,11 +270,11 @@ ALL_COLORS = [
     BLUE_GREY,
 ]
 
-def hex_to_rgb(hex: int) -> Tuple[int, int, int]:
+def hex2rgb(hex: int) -> Tuple[int, int, int]:
     r = (hex & 0xFF0000) >> 16
     g = (hex & 0x00FF00) >> 8
     b = (hex & 0x0000FF)
     return r, g, b
 
-def hex_to_bgr(hex: int) -> Tuple[int, int, int]:
-    return hex_to_rgb(hex)[::-1]
+def hex2bgr(hex: int) -> Tuple[int, int, int]:
+    return hex2rgb(hex)[::-1]
