@@ -10,8 +10,8 @@ import numpy as np
 from ultralytics import YOLO
 
 sys.path.append(str(Path(__file__).parents[1]))
-from lib.video import FrameCapture, FrameSkipper
 from lib.pose import plot_bounding_box, plot_skeleton
+from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
 
 
