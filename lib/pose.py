@@ -1,11 +1,7 @@
-from typing import Tuple, Dict, List
-
-import cv2
-import numpy as np
-
-from utils.plotting import plot_text
-
-
+#from typing import Tuple, Dict, List
+#import cv2
+#import numpy as np
+#from utils.plotting import plot_text
 DEAFAULT_SCHEMA = {
     0: [1, 2,],
     1: [3,],
@@ -25,8 +21,7 @@ DEAFAULT_SCHEMA = {
     15: [],
     16: [],
 }
-
-
+'''
 def plot_bounding_box(
         img: np.ndarray,
         xyxy: np.ndarray,
@@ -48,7 +43,6 @@ def plot_bounding_box(
                   label,
                   pt1,
                   bgcolor=color)
-
 
 def plot_skeleton(
         img: np.ndarray,
@@ -77,3 +71,4 @@ def plot_skeleton(
                      pt2,
                      color,
                      limb_thick)
+'''
