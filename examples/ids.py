@@ -2,7 +2,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Iterable, Dict
+from typing import Dict
 
 import cv2
 import flask
@@ -10,75 +10,52 @@ import numpy as np
 from ultralytics import YOLO
 
 sys.path.append(str(Path(__file__).parents[1]))
+from lib.timer import TimerManager
 from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
 from utils.plotting import plot_bounding_box
-
-
-class Timer():
-    prev_timer_ids = set()
-    curr_timer_ids = set()
-    timers = {}
-
-    @staticmethod
-    def syncronize(object_ids: Iterable[int]):
-        object_ids = set(object_ids)
-        for object_id in Timer.prev_timer_ids - object_ids:
-            del Timer.timers[object_id]
-        for object_id in object_ids - Timer.prev_timer_ids:
-            Timer.timers[object_id] = Timer()
-        Timer.prev_timer_ids = object_ids
-
-    def __init__(self) -> None:
-        self.start_time = time.time()
-
-    def get_elapsed_time(self) -> str:
-        elapsed_time = time.time() - self.start_time
-        h, r = divmod(elapsed_time, 3600)
-        m, s = divmod(r, 60)
-        return f'{int(h):02}:{int(m):02}:{int(s):02}'
 
 
 def plot_boxes_in_redzone(
         img: np.ndarray,
         boxes: np.ndarray,
         names: Dict[int, str],
+        timer_manager: TimerManager,
         redzone_mask: np.ndarray,
         bbox_conf_thres: float = 0.5,
         label_on: bool = False,
     ) -> None:
 
+    # --- DIRTY CODE ---
+    # boxes shape is (n, 7)
+    # box in boxes is (x_min, y_min, x_max, y_max, box_id, conf, class_id)
+    boxes = boxes[boxes[:, 5] >= bbox_conf_thres]
+    boxes_xyxy = boxes[:, :4].astype(int)
+    boxes_cxcy = np.empty(shape=(len(boxes), 2), dtype=int)
+    boxes_cxcy[:, 0] = (boxes_xyxy[:, 0] + boxes_xyxy[:, 2]) >> 1  # = int((x1 + x2) / 2)
+    boxes_cxcy[:, 1] = (boxes_xyxy[:, 1] + boxes_xyxy[:, 3]) >> 1  # = int((y1 + y2) / 2)
+    # dtype of redzone_mask is uint8, ndim is 2, value is either 0 or 255.
+    boxes = boxes[redzone_mask[boxes_cxcy[:, 1], boxes_cxcy[:, 0]] == 255]
+    # --- ---
+
     boxes_ids = boxes[:, 4].astype(int)
-    Timer.syncronize(boxes_ids)
+    timer_manager.syncronize(boxes_ids)
 
     color = [hex2bgr(c[500]) for c in ALL_COLORS]
 
     for bbox in boxes:
-        if len(bbox) == 7:
-            bbox_id, bbox_conf = int(bbox[4]), bbox[5]
-        else:
-            bbox_id, bbox_conf = 0, bbox[4]
-
-        if bbox_conf < bbox_conf_thres:
-            continue
-
+        bbox_id, bbox_conf = int(bbox[4]), bbox[5]
         xyxy = bbox[:4].astype(int)
-        pt1, pt2 = xyxy[:2], xyxy[2:]
-        cx = (pt1[0] + pt2[0]) >> 1
-        cy = (pt1[1] + pt2[1]) >> 1
-        if redzone_mask[cy, cx] == 0:
-            continue
 
         if label_on:
             bbox_name = names[bbox[-1]]
             bbox_conf = f'{bbox_conf:.3f}'
-            bbox_time = Timer.timers[bbox_id].get_elapsed_time()
+            bbox_time = timer_manager.timers[bbox_id].get_elapsed_time()
             label = f'{bbox_name} {bbox_conf} {bbox_time}'
         else:
             label = None
 
         color_id = bbox_id % len(color)
-        cv2.circle(img, (cx, cy), 5, color[color_id], -1)
         plot_bounding_box(img,
                           xyxy,
                           color[color_id],
@@ -115,6 +92,7 @@ def main():
 
     model = YOLO('yolov8n.pt')
     skipper = FrameSkipper(skip_interval)
+    manager = TimerManager()
     names = model.names
 
     redzone = np.array(redzone)
@@ -146,12 +124,10 @@ def main():
                     plot_boxes_in_redzone(frame,
                                           boxes,
                                           names,
+                                          manager,
                                           redzone_mask=redzone_mask,
                                           label_on=True)
                 
-                mask3d = cv2.cvtColor(redzone_mask, cv2.COLOR_GRAY2BGR)
-                frame = np.hstack([frame, mask3d])
-
                 jpeg = to_jpeg(frame)
                 data = to_http_multipart(jpeg)
                 yield data
