@@ -10,10 +10,9 @@ import numpy as np
 from ultralytics import YOLO
 
 sys.path.append(str(Path(__file__).parents[1]))
-from lib.pose import DEAFAULT_SCHEMA
 from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
-from utils.plotting import plot_bounding_box, plot_keypoints
+from utils.plotting import plot_bounding_box
 
 
 class Timer():
@@ -40,13 +39,12 @@ class Timer():
         return f'{int(h):02}:{int(m):02}:{int(s):02}'
 
 
-def plot_pose_with_timer(
+def plot_boxes_in_redzone(
         img: np.ndarray,
         boxes: np.ndarray,
-        kptss: np.ndarray,
         names: Dict[int, str],
+        redzone_mask: np.ndarray,
         bbox_conf_thres: float = 0.5,
-        kpts_conf_thres: float = 0.5,
         label_on: bool = False,
     ) -> None:
 
@@ -55,9 +53,20 @@ def plot_pose_with_timer(
 
     color = [hex2bgr(c[500]) for c in ALL_COLORS]
 
-    for bbox, kpts in zip(boxes, kptss):
-        bbox_id, bbox_conf = int(bbox[4]), bbox[5]
+    for bbox in boxes:
+        if len(bbox) == 7:
+            bbox_id, bbox_conf = int(bbox[4]), bbox[5]
+        else:
+            bbox_id, bbox_conf = 0, bbox[4]
+
         if bbox_conf < bbox_conf_thres:
+            continue
+
+        xyxy = bbox[:4].astype(int)
+        pt1, pt2 = xyxy[:2], xyxy[2:]
+        cx = (pt1[0] + pt2[0]) >> 1
+        cy = (pt1[1] + pt2[1]) >> 1
+        if redzone_mask[cy, cx] == 0:
             continue
 
         if label_on:
@@ -69,15 +78,11 @@ def plot_pose_with_timer(
             label = None
 
         color_id = bbox_id % len(color)
+        cv2.circle(img, (cx, cy), 5, color[color_id], -1)
         plot_bounding_box(img,
-                          bbox[:4],
+                          xyxy,
                           color[color_id],
                           label=label)
-        plot_keypoints(img,
-                       kpts,
-                       color[color_id],
-                       schema=DEAFAULT_SCHEMA,
-                       conf_thres=kpts_conf_thres)
 
 
 def to_jpeg(frame):
@@ -103,32 +108,49 @@ def main():
     video_source = 'rtsp://192.168.1.101:554/profile2/media.smp'
     target_size = (640, 360)
     skip_interval = 3
+    redzone = ((10, 10),
+               (20, 350),
+               (300, 340),
+               (240, 20))
 
-    model = YOLO('yolov8n-pose.pt')
+    model = YOLO('yolov8n.pt')
     skipper = FrameSkipper(skip_interval)
     names = model.names
+
+    redzone = np.array(redzone)
+    redzone = redzone.reshape(1, -1, 2)
+    redzone_mask = np.zeros(shape=target_size[::-1], dtype=np.uint8)
+    cv2.fillPoly(redzone_mask, [redzone], 255)
 
     try:
         with FrameCapture(video_source) as cap:
             preds = None
             for frame in cap:
                 frame = cv2.resize(frame, target_size)
+                cv2.polylines(frame,
+                              [redzone],
+                              True,
+                              (0, 0, 255),
+                              2)
 
                 if not skipper.is_skip():
                     # TODO: only possible tracking mode.
                     preds = model.track(frame,
                                         persist=True,
-                                        verbose=False)
+                                        verbose=False,
+                                        classes=[0],)
 
                 if not preds is None:
                     results = preds[0]
                     boxes = results.boxes.data.cpu().numpy()
-                    kptss = results.keypoints.data.cpu().numpy()
-                    plot_pose_with_timer(frame,
-                                         boxes,
-                                         kptss,
-                                         names,
-                                         label_on=True)
+                    plot_boxes_in_redzone(frame,
+                                          boxes,
+                                          names,
+                                          redzone_mask=redzone_mask,
+                                          label_on=True)
+                
+                mask3d = cv2.cvtColor(redzone_mask, cv2.COLOR_GRAY2BGR)
+                frame = np.hstack([frame, mask3d])
 
                 jpeg = to_jpeg(frame)
                 data = to_http_multipart(jpeg)

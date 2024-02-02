@@ -9,9 +9,10 @@ import numpy as np
 from ultralytics import YOLO
 
 sys.path.append(str(Path(__file__).parents[1]))
-from lib.pose import plot_bounding_box, plot_skeleton
+from lib.pose import DEAFAULT_SCHEMA
 from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
+from utils.plotting import plot_bounding_box, plot_keypoints
 
 
 def plot_pose(
@@ -45,10 +46,11 @@ def plot_pose(
                           bbox[:4],
                           color[color_id],
                           label=label)
-        plot_skeleton(img,
-                      kpts,
-                      color[color_id],
-                      conf_thres=kpts_conf_thres)
+        plot_keypoints(img,
+                       kpts,
+                       color[color_id],
+                       schema=DEAFAULT_SCHEMA,
+                       conf_thres=kpts_conf_thres)
 
 
 def to_jpeg(frame):
@@ -77,6 +79,7 @@ def main():
 
     model = YOLO('yolov8n-pose.pt')
     skipper = FrameSkipper(skip_interval)
+    names = model.names
 
     try:
         with FrameCapture(video_source) as cap:
@@ -97,7 +100,6 @@ def main():
                     results = preds[0]
                     boxes = results.boxes.data.cpu().numpy()
                     kptss = results.keypoints.data.cpu().numpy()
-                    names = results.names
                     plot_pose(frame,
                               boxes,
                               kptss,
