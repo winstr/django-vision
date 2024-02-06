@@ -10,11 +10,10 @@ class FrameSkipper():
             raise ValueError(err)
 
         self._interval = interval
-        self._flags = tuple([False] + [True] * (interval - 1))
         self._pos = 0
 
     def is_skip(self) -> bool:
-        skip = not bool(self._pos % self._interval)
+        skip = bool(self._pos % self._interval)
         if self._pos >= self._interval - 1:
             self._pos = 0
         else:
