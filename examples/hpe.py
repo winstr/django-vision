@@ -8,7 +8,7 @@ import flask
 import numpy as np
 from ultralytics import YOLO
 
-sys.path.append(str(Path(__file__).parents[1]))
+sys.path.append(str(Path(__file__).absolute().parents[1]))
 from lib.pose import DEAFAULT_SCHEMA
 from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
