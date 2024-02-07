@@ -1,3 +1,41 @@
+"""
+일반적인 목적으로 사용될 수 있는 유틸 함수 및 클래스들을 모아 두었
+습니다.
+
+[Functions]
+
+    get_files(name_pattern, root_dir, recursive) -> Generator
+        특정 디렉토리 내에서 이름패턴과 매칭되는 모든 파일의 경로를
+        조회합니다. 재귀옵션을 통해 하위 디렉토리의 내부에 존재하는
+        파일들 또한 함께 조회하는 기능을 제공합니다. 
+
+[Classes]
+
+    StepSkipper
+        반복적 작업에 대하여, 단위 간격을 기준으로 현재 동작의 스킵
+        여부를 결정합니다.
+"""
+
+
+import os
+import fnmatch
+from typing import Generator
+
+
+def get_files(
+        name_pattern: str,
+        root_dir: str,
+        recursive: bool=True
+    ) -> Generator:
+
+    for parent_dir, _, files in os.walk(root_dir):
+        if files:
+            for file in fnmatch.filter(files, name_pattern):
+                yield os.path.join(parent_dir, file)
+        if not recursive:
+            break
+
+
 class StepSkipper():
 
     """ 반복적 작업에 대하여, 단위 간격을 기준으로 현재 동작의 스킵
