@@ -2,8 +2,10 @@ __pycache__/
 config/ffmpeg_.json
 *.pt
 *.mp4
+*.pkl
 *.pyc
 *.png
 *.jpg
 *.gif
+.venv
 !examples/imgs
