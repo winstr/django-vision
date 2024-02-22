@@ -1,20 +1,46 @@
 import sys
+import time
 import traceback
 from pathlib import Path
-from typing import Dict
+from typing import Iterable, Dict
 
 import cv2
 import flask
 import numpy as np
 from ultralytics import YOLO
 
-sys.path.append(str(Path(__file__).parents[1]))
-from lib.pose import plot_bounding_box, plot_skeleton
+sys.path.append(str(Path(__file__).absolute().parents[1]))
+from lib.pose import DEAFAULT_SCHEMA
 from utils.video import FrameCapture, FrameSkipper
 from utils.color import ALL_COLORS, hex2bgr
+from utils.plotting import plot_bounding_box, plot_keypoints
 
 
-def plot_pose(
+class Timer():
+    prev_timer_ids = set()
+    curr_timer_ids = set()
+    timers = {}
+
+    @staticmethod
+    def syncronize(object_ids: Iterable[int]):
+        object_ids = set(object_ids)
+        for object_id in Timer.prev_timer_ids - object_ids:
+            del Timer.timers[object_id]
+        for object_id in object_ids - Timer.prev_timer_ids:
+            Timer.timers[object_id] = Timer()
+        Timer.prev_timer_ids = object_ids
+
+    def __init__(self) -> None:
+        self.start_time = time.time()
+
+    def get_elapsed_time(self) -> str:
+        elapsed_time = time.time() - self.start_time
+        h, r = divmod(elapsed_time, 3600)
+        m, s = divmod(r, 60)
+        return f'{int(h):02}:{int(m):02}:{int(s):02}'
+
+
+def plot_pose_with_timer(
         img: np.ndarray,
         boxes: np.ndarray,
         kptss: np.ndarray,
@@ -24,19 +50,21 @@ def plot_pose(
         label_on: bool = False,
     ) -> None:
 
+    boxes_ids = boxes[:, 4].astype(int)
+    Timer.syncronize(boxes_ids)
+
     color = [hex2bgr(c[500]) for c in ALL_COLORS]
 
     for bbox, kpts in zip(boxes, kptss):
-        if len(bbox) == 7:
-            bbox_id, bbox_conf = int(bbox[4]), bbox[5]
-        else:
-            bbox_id, bbox_conf = 0, bbox[4]
-
+        bbox_id, bbox_conf = int(bbox[4]), bbox[5]
         if bbox_conf < bbox_conf_thres:
             continue
 
         if label_on:
-            label = f'{names[bbox[-1]]} {bbox_conf:.3f}'
+            bbox_name = names[bbox[-1]]
+            bbox_conf = f'{bbox_conf:.3f}'
+            bbox_time = Timer.timers[bbox_id].get_elapsed_time()
+            label = f'{bbox_name} {bbox_conf} {bbox_time}'
         else:
             label = None
 
@@ -45,10 +73,11 @@ def plot_pose(
                           bbox[:4],
                           color[color_id],
                           label=label)
-        plot_skeleton(img,
-                      kpts,
-                      color[color_id],
-                      conf_thres=kpts_conf_thres)
+        plot_keypoints(img,
+                       kpts,
+                       color[color_id],
+                       schema=DEAFAULT_SCHEMA,
+                       conf_thres=kpts_conf_thres)
 
 
 def to_jpeg(frame):
@@ -77,6 +106,7 @@ def main():
 
     model = YOLO('yolov8n-pose.pt')
     skipper = FrameSkipper(skip_interval)
+    names = model.names
 
     try:
         with FrameCapture(video_source) as cap:
@@ -85,24 +115,20 @@ def main():
                 frame = cv2.resize(frame, target_size)
 
                 if not skipper.is_skip():
-                    # TODO: tracking.
+                    # TODO: only possible tracking mode.
                     preds = model.track(frame,
                                         persist=True,
                                         verbose=False)
-                    # TODO: non-tracking.
-                    #preds = model.predict(frame,
-                    #                      verbose=False)
 
                 if not preds is None:
                     results = preds[0]
                     boxes = results.boxes.data.cpu().numpy()
                     kptss = results.keypoints.data.cpu().numpy()
-                    names = results.names
-                    plot_pose(frame,
-                              boxes,
-                              kptss,
-                              names,
-                              label_on=True)
+                    plot_pose_with_timer(frame,
+                                         boxes,
+                                         kptss,
+                                         names,
+                                         label_on=True)
 
                 jpeg = to_jpeg(frame)
                 data = to_http_multipart(jpeg)

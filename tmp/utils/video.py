@@ -1,27 +1,6 @@
 import cv2
 
 
-class FrameSkipper():
-
-    def __init__(self, interval: int):
-        if not isinstance(interval, int) or interval <= 1:
-            err = ('The interval value must be a positive integer '
-                  f'greater than 1, but input is {interval}.')
-            raise ValueError(err)
-
-        self._interval = interval
-        self._flags = tuple([False] + [True] * (interval - 1))
-        self._pos = 0
-
-    def is_skip(self) -> bool:
-        skip = not bool(self._pos % self._interval)
-        if self._pos >= self._interval - 1:
-            self._pos = 0
-        else:
-            self._pos = self._pos + 1
-        return skip
-
-
 class FrameCapture(cv2.VideoCapture):
 
     def __init__(self, *args, **kwargs):
