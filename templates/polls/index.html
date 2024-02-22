@@ -3,9 +3,19 @@
     <head>
         <meta charset="utf-8">
         <title>polls</title>
+        <h1>Polls Index Page</h1>
     </head>
     <body>
-        <h1>Index polls</h1>
-        <p1>None</p1>
+    {% if latest_question_list %}
+        <ul>
+        {% for question in latest_question_list %}
+            <li>
+                <a href="/polls/{{ question.id }}">{{ question.content }}</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No polls are available.</p>
+    {% endif %}
     </body>
 </html>
