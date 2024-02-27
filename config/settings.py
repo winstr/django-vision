@@ -25,12 +25,14 @@ SECRET_KEY = 'django-insecure-(w9ynmr+kn9bj1wz$9p%+m^8%u#(_1fedx$)pep8$hj*p6kp*e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['172.27.0.11']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'apps.vision',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -67,7 +69,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+#WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
