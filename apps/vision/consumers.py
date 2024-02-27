@@ -1,9 +1,15 @@
+import asyncio
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 import cv2
 import numpy as np
 
 
+FRAME_QUEUE = asyncio.Queue(maxsize=100)
+
+
 class FrameConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
         await self.accept()
 
@@ -14,3 +20,7 @@ class FrameConsumer(AsyncWebsocketConsumer):
         if bytes_data:
             frame = np.frombuffer(bytes_data, dtype=np.uint8)
             frame = cv2.imdecode(frame, cv2.IMREAD_ANYCOLOR)
+            cv2.rectangle(frame, (10, 10), (100, 100), (0, 255, 0), 1)
+            if FRAME_QUEUE.full():
+                await FRAME_QUEUE.get()
+            await FRAME_QUEUE.put(frame)
