@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 
-FRAME_QUEUE = asyncio.Queue(maxsize=100)
+FRAME_QUEUE = asyncio.Queue(maxsize=1)
 
 
 class FrameConsumer(AsyncWebsocketConsumer):
