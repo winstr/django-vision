@@ -1,10 +1,12 @@
 import json
 import logging
+import asyncio
 import traceback
+import websockets
 from typing import Dict, Any
 
 from django.shortcuts import render
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, HttpResponse
 import cv2
 import numpy as np
 
@@ -17,16 +19,38 @@ from .consumers import QUEUE
 def vision(request):
     return render(request, 'vision/vision.html')
 
+def test(request):
+    return render(request, 'vision/test.html')
 
+async def stream(request):
+    async def generate_image():
+        try:
+            while True:
+                frame = await QUEUE.get()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n'
+                       + frame + b'\r\n')
+        except:
+            traceback.print_exc()
+
+    return StreamingHttpResponse(
+        generate_image(),
+        content_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
+"""
 async def stream(request):
     async def generate_image(delimiter: str=b'\xFF\xFE\xFF\xFE'):
         try:
             while True:
                 bytes_data = await QUEUE.get()
 
+                
+                '''
                 delimiter_index = bytes_data.find(delimiter)
                 frame = bytes_data[:delimiter_index]
                 preds = bytes_data[delimiter_index + len(delimiter):]
+                '''
 
                 frame = np.frombuffer(bytes_data, dtype=np.uint8)
                 frame = cv2.imdecode(frame, cv2.IMREAD_ANYCOLOR)
@@ -130,3 +154,4 @@ def plot(
                 frame_ids, xyxy, COLORS[color_id], label=label)
 
     return np.hstack([frame_hpe, frame_ids])
+"""
