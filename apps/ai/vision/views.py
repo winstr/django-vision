@@ -1,41 +1,53 @@
-import json
-import logging
-import asyncio
+#import json
+#import logging
+#import asyncio
 import traceback
-import websockets
-from typing import Dict, Any
+#import websockets
+#from typing import Dict, Any
 
+from django.apps import apps
 from django.shortcuts import render
-from django.http import StreamingHttpResponse, HttpResponse
-import cv2
-import numpy as np
+from django.http import StreamingHttpResponse
+#from django.http import HttpResponse
+#import cv2
+#import numpy as np
 
-from .src.colors import ALL_COLORS, hex2bgr
-from .src.plotting import plot_bounding_box, plot_keypoints
-from .src.timer import TimerManager
-from .consumers import QUEUE
+#from .src.colors import ALL_COLORS, hex2bgr
+#from .src.plotting import plot_bounding_box, plot_keypoints
+#from .src.timer import TimerManager
 
 
-def vision(request):
-    return render(request, 'vision/vision.html')
+def intro(request):
+    return render(request, 'apps/ai/vision/intro.html')
 
-def test(request):
-    return render(request, 'vision/test.html')
 
-async def stream(request):
-    async def generate_image():
+def dashboard(request):
+    return render(request, 'apps/ai/vision/dashboard.html')
+
+
+def control(request):
+    return render(request, 'apps/ai/vision/control.html')
+
+
+async def show_stream(request):
+    queue = apps.get_app_config('vision').stream_queue
+
+    def to_multipart(jpeg_bytes):
+        return (b'--jpeg\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + jpeg_bytes + b'\r\n')
+
+    async def gen_image():
         try:
             while True:
-                frame = await QUEUE.get()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n'
-                       + frame + b'\r\n')
+                jpeg_bytes = await queue.get()
+                yield to_multipart(jpeg_bytes)
         except:
             traceback.print_exc()
 
     return StreamingHttpResponse(
-        generate_image(),
-        content_type="multipart/x-mixed-replace; boundary=frame"
+        gen_image(),
+        content_type="multipart/x-mixed-replace; boundary=jpeg"
     )
 
 """
@@ -45,7 +57,6 @@ async def stream(request):
             while True:
                 bytes_data = await QUEUE.get()
 
-                
                 '''
                 delimiter_index = bytes_data.find(delimiter)
                 frame = bytes_data[:delimiter_index]
