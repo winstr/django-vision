@@ -1,79 +1,57 @@
 {% extends 'common/base.html' %}
 {% load static %}
 
-{% block head %}
+{% block style %}
 <link rel="stylesheet" href="{% static 'common/signup.css' %}">
 {% endblock %}
 
-{% block body %}
+{% block title %}
+<title>Sign up</title>
+{% endblock %}
+
+{% block content %}
 <div class="min-vh-100 d-flex align-items-center py-4 bg-body-tertiary">
-    <main class="form-signup w-100 m-auto">
-        <form method="post" class="post-form" action="{% url 'common:signup' %}">
-            {% csrf_token %}
-            {% include 'common/form_errors.html' %}
-
-            <!-- 사인업 타이틀 -->
-            <h1 class="h3 mb-3 fw-normal">Sign up</h1>
-
-            <!-- 아이디 입력란 -->
-            <div class="form-group form-floating">
-                <input type="text"
-                       class="form-control"
-                       id="username"
-                       placeholder="username"
-                       name="username"
-                       value="{{ form.username.value|default_if_none:'' }}">
-                <label for="username">Username</label>
-            </div>
-
-            <!-- 이메일 입력란 -->
-            <div class="form-group form-floating">
-                <input type="email"
-                       class="form-control"
-                       id="email"
-                       placeholder="email"
-                       name="email"
-                       value="{{ form.eamil.value|default_if_none:'' }}">
-                <label for="email">Email</label>
-            </div>
-
-            <!-- 패스워드 입력란 -->
-            <div class="from-group form-floating">
-                <input type="password"
-                       class="form-control"
-                       id="password1"
-                       placeholder="password"
-                       name="password1"
-                       value="{{ form.password1.value|default_if_none:'' }}">
-                <label for="password1">Password</label>
-            </div>
-
-            <!-- 패스워드 확인란 -->
-            <div class="from-group form-floating">
-                <input type="password"
-                       class="form-control"
-                       id="password2"
-                       placeholder="password"
-                       name="password2"
-                       value="{{ form.password2.value|default_if_none:'' }}">
-                <label for="password_confirm">Password confirmation</label>
-            </div>
-
-            <!-- 사인업 버튼 -->
-            <button class="btn btn-primary w-100 py-2"
-                    type="submit">Sign up</button>
-
-            <!-- (계정 있으면) 로그인 버튼 -->
-            <div class="text-center mt-3">
-                <span>
-                    or <a href="{% url 'common:login' %}"
-                            class=".signup">Log in</a>
-                </span>
-            </div>
-
-            <!-- 기타 메시지 -->
-            <p class="mt-5 mb-3 text-body-secondary">@ Seunghyeon Kim</p>
-        </form>
-    </main>
+  <main class="form-signup w-100 m-auto">
+    <form method="post" class="post-form" action="{% url 'common:signup' %}">
+      {% csrf_token %}
+      {% include 'common/form_errors.html' %}
+      <!--  -->
+      <h1 class="h3 mb-3 fw-normal">Sign up</h1>
+      <!--  -->
+      <div class="form-group form-floating">
+        <input type="text" class="form-control" id="username" placeholder="username" name="username"
+          value="{{ form.username.value|default_if_none:'' }}">
+        <label for="username">Username</label>
+      </div>
+      <!--  -->
+      <div class="form-group form-floating">
+        <input type="email" class="form-control" id="email" placeholder="email" name="email"
+          value="{{ form.email.value|default_if_none:'' }}">
+        <label for="email">Email</label>
+      </div>
+      <!--  -->
+      <div class="from-group form-floating">
+        <input type="password" class="form-control" id="password1" placeholder="password" name="password1"
+          value="{{ form.password1.value|default_if_none:'' }}">
+        <label for="password1">Password</label>
+      </div>
+      <!--  -->
+      <div class="from-group form-floating">
+        <input type="password" class="form-control" id="password2" placeholder="password" name="password2"
+          value="{{ form.password2.value|default_if_none:'' }}">
+        <label for="password_confirm">Password confirmation</label>
+      </div>
+      <!--  -->
+      <button class="btn btn-primary w-100 py-2" type="submit">Sign up</button>
+      <!--  -->
+      <div class="text-center mt-3">
+        <span>
+          or <a href="{% url 'common:login' %}" class=".signup">Log in</a>
+        </span>
+      </div>
+      <!--  -->
+      <p class="mt-5 mb-3 text-body-secondary">@ Seunghyeon Kim</p>
+    </form>
+  </main>
 </div>
 {% endblock %}

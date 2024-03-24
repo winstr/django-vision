@@ -1,0 +1,40 @@
+{% extends 'common/base.html' %}
+
+{% block title %}
+<title>Control</title>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <h5>Camera</h5>
+  <img src="{% url 'vision_ai:stream' %}" class="img-fluid" />
+</div>
+<div class="container-fluid">
+  <input type="text" id="host_textfield" value="ws://172.27.1.12:8000" />
+  <input type="submit" id="host_submitbutton" value="Connect" />
+  <input type="text" id="asgi_textfield" placeholder="message" />
+  <input type="submit" id="asgi_submitbutton" value="Send" />
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  var ws;
+  const host_textfield = document.getElementById('host_textfield');
+  const host_submitbutton = document.getElementById('host_submitbutton');
+  host_submitbutton.addEventListener('click', function () {
+    ws = new WebSocket(host_textfield.value);
+    ws.onopen = function () {
+      console.log('websocket connection established.');
+    };
+    ws.onmessage = function (event) {
+      console.log(event.data);
+    };
+  });
+  const asgi_textfield = document.getElementById('asgi_textfield');
+  const asgi_submitbutton = document.getElementById('asgi_submitbutton');
+  asgi_submitbutton.addEventListener('click', function () {
+    ws.send(asgi_textfield.value);
+  });
+</script>
+{% endblock %}

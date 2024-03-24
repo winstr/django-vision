@@ -16,14 +16,14 @@ ALLOWED_HOSTS = ['172.27.1.14']
 # Application definition
 INSTALLED_APPS = [
     'channels',
-    'common.apps.CommonConfig',
-    'apps.ai.vision.apps.VisionConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'apps.vision_ai.apps.VisionAIConfig',
+    'apps.common.apps.CommonConfig',
 ]
 
 MIDDLEWARE = [
